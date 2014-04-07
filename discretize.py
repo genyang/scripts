@@ -8,13 +8,12 @@ from classifip import dataset
 
 
 # Parameters :
-# files = ['abalone','ailerons','autoMpg','autoPrice','bank8FM','bank32NH','housingB',
-#          'housingCal','cpuAct','cpuSmall','aileronsDelta','elevators','friedman',
-#          'house8L','house16H','kinematics','mv','puma8NH','puma32H','servo',
-#          'stocks','ERA','ESL','LEV']
+files = ['autoPrice','bank8FM','bank32NH','boston_housing','california_housing','cpu_small',
+            'delta_ailerons','elevators','delta_elevators','friedman','house_8L','house_16H',
+            'kinematics','mv','puma8NH','puma32H','stock','ERA','ESL']
 
-files = ['iris','glass','pendigits']
-
+# continuous data
+# files = ['iris','wine','grub-damage','page-blocks','glass','segment','ecoli','pendigits']
 
 # For nested dichotomies and NCCOF
 for f in files :
@@ -28,9 +27,15 @@ for f in files :
      
     # Entry data file
     arff.load(filename_in)
-     
+    
+    #Discretization of the class
+    if arff.attribute_types['class'] != 'nominal':
+        arff.discretize(discmet='eqfreq', numint=5, selfeat='class')
+        
+    arff.save('..\\datasets\\' + f + '_logit.arff')
+    
     # Discretization of the attributes, if it is not nominal already
-    arff.discretize(discmet='eqwidth', numint=5)
+    arff.discretize(discmet='eqfreq', numint=8)
      
     arff.save(filename_out)
      
