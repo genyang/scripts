@@ -8,15 +8,15 @@ from binarytree import dichotomies
 import numpy as np
 import math
 import os.path
-
+import time
 # filename = ['autoMpg','autoPrice','bank8FM','bank32NH','boston_housing',
 #          'california_housing','delta_ailerons','elevators','friedman','house8L','house16H',
 #          'kinematics','mv','puma8NH','puma32H','stocks','ERA','ESL','LEV']
 
 #Continuous data or closely, suitable for Logit model
-filename = ['autoPrice','bank8FM','bank32NH','boston_housing','california_housing','cpu_small',
-            'delta_ailerons','elevators','delta_elevators','friedman','house_8L','house_16H',
-            'kinematics','puma8NH','puma32H','stock','ERA','ESL','LEV']
+# filename = ['autoPrice','bank8FM','bank32NH','boston_housing','california_housing','cpu_small',
+#             'delta_ailerons','elevators','delta_elevators','friedman','house_8L','house_16H',
+#             'kinematics','puma8NH','puma32H','stock','ERA','ESL','LEV']
 
 
 
@@ -25,7 +25,7 @@ filename = ['autoPrice','bank8FM','bank32NH','boston_housing','california_housin
 
 # Data with upper/lower bounds issue with s = 0.001 or less
 # filename = ['ailerons','abalone','cpu_act']
-
+filename = ['car']
 
 def k_fold_cross_validation(data, K, randomise = False, random_seed=None, structured=None):
     """
@@ -68,6 +68,7 @@ for f in filename :
     result=[]
     true=[]
     total=0.
+    c = 0
     
     #NBC 
     score_nbc = 0.
@@ -113,9 +114,9 @@ for f in filename :
         dataArff.load('..\\datasets\\' + f + '_dis.arff')
     else:
         dataArff.load('..\\datasets\\' + f + '.arff')
-        
-    dataLogit = classifip.dataset.arff.ArffFile()
-    dataLogit.load('..\\datasets\\' + f + '_logit.arff')
+#         
+#     dataLogit = classifip.dataset.arff.ArffFile()
+#     dataLogit.load('..\\datasets\\' + f + '_logit.arff')
         
     
     
@@ -127,19 +128,19 @@ for f in filename :
         tree = dico.build_ordinal(training)
         
         
-        l = classifip.models.ncc.NCC()
-        model=classifip.models.nccof.NCCOF()
-
-        logit = classifip.models.ordinalLogit.OrdinalLogit()
+#         l = classifip.models.ncc.NCC()
+#         model=classifip.models.nccof.NCCOF()
+# 
+#         logit = classifip.models.ordinalLogit.OrdinalLogit()
         
         #print 'learning'
         #Logit
-        X,y = logit.transform_data(dataLogit, index = index_tr)  
-        w, theta = logit.ordinal_logistic_fit(X, y)
-#         #NBC
-#         l.learn(training)
-        #NCCOF
-        model.learn(training)
+#         X,y = logit.transform_data(dataLogit, index = index_tr)  
+#         w, theta = logit.ordinal_logistic_fit(X, y)
+# #         #NBC
+# #         l.learn(training)
+#         #NCCOF
+#         model.learn(training)
         #Nested dichotomies
         tree.learnAll(training)
     
@@ -147,28 +148,34 @@ for f in filename :
         #print 'evaluating'
         
         #NCCOF
-        l_resu=model.evaluate([x[0:len(x)-1] for x in validation.data],ncc_s_param=[2])
-        res = []
-        for i in range(0,len(l_resu)): 
-            res.append(l_resu[i][0].nc_maximal_decision())
-    
-        #NBCOF
-        l_resu=model.evaluate([x[0:len(x)-1] for x in validation.data],ncc_s_param=[0.001])
-        res_nbcof = []
-        for i in range(0,len(l_resu)): 
-            res_nbcof.append(l_resu[i][0].nc_maximal_decision())
+#         l_resu=model.evaluate([x[0:len(x)-1] for x in validation.data],ncc_s_param=[2])
+#         res = []
+#         for i in range(0,len(l_resu)): 
+#             res.append(l_resu[i][0].nc_maximal_decision())
+#     
+#         #NBCOF
+#         l_resu=model.evaluate([x[0:len(x)-1] for x in validation.data],ncc_s_param=[0.001])
+#         res_nbcof = []
+#         for i in range(0,len(l_resu)): 
+#             res_nbcof.append(l_resu[i][0].nc_maximal_decision())
         
         #NCC + ND
-        tree.evaluate([x[0:len(x)-1] for x in validation.data],ncc_s_param=[2])    
-        res_tree_ncc = tree.decision_maximality()
+        tree.evaluate([x[0:len(x)-1] for x in validation.data],ncc_s_param=[2])
+        costs = classifip.dataset.genCosts.costMatrix(training)    
+        
+        a = time.time()
+        res_tree_ncc = tree.decision_maximality(costs.ordinalCost())
+        b = time.time()
+        
+        c = c + b-a
         
         #NBC + ND
-        tree.evaluate([x[0:len(x)-1] for x in validation.data],ncc_s_param=[0.001])    
-        res_tree_nbc = tree.decision_maximality()
-        
-        #Logit
-        X_val, y_val = logit.transform_data(dataLogit, index = index_val)
-        res_logit = logit.ordinal_logistic_predict(w, theta, X_val)
+#         tree.evaluate([x[0:len(x)-1] for x in validation.data],ncc_s_param=[0.001])    
+#         res_tree_nbc = tree.decision_maximality()
+#         
+#         #Logit
+#         X_val, y_val = logit.transform_data(dataLogit, index = index_val)
+#         res_logit = logit.ordinal_logistic_predict(w, theta, X_val)
 
 #         #NBC
 #         l_resu0 =  l.evaluate(validation.data, ncc_s_param=[0.001])  
@@ -208,32 +215,32 @@ for f in filename :
     
             
             # For Logit
-            if y_val[run] == res_logit[run]:
-                score_logit = score_logit + 1.
-                
-            # For NBCOF
-            if res_nbcof[run][ind]==1.:
-                score_nbcof +=+1.
-            
-            # For NCCOF
-            if res[run][ind]==1.:
-                score=score+1.
-            if res[run][ind]==1.:
-                sc = 1./(res[run].sum())
-                disc_score=disc_score + sc
-                disc_u65 = disc_u65 - 1.2* sc*sc + 2.2 * sc
-            if res[run].sum()>1.:
-                imp=imp+1.
-                if res[run][ind]==1.:
-                    correct_nccof += 1
-                if res_nbcof[run][ind]==1.:
-                    correct_nbcof += 1
-            mean_imp=mean_imp+res[run].sum()
-            
-            # For ND + NBC
-            ind=tree.node.label.index(k)
-            if res_tree_nbc[run][ind]==1.:
-                score_tree_nbc=score_tree_nbc+1.
+#             if y_val[run] == res_logit[run]:
+#                 score_logit = score_logit + 1.
+#                 
+#             # For NBCOF
+#             if res_nbcof[run][ind]==1.:
+#                 score_nbcof +=+1.
+#             
+#             # For NCCOF
+#             if res[run][ind]==1.:
+#                 score=score+1.
+#             if res[run][ind]==1.:
+#                 sc = 1./(res[run].sum())
+#                 disc_score=disc_score + sc
+#                 disc_u65 = disc_u65 - 1.2* sc*sc + 2.2 * sc
+#             if res[run].sum()>1.:
+#                 imp=imp+1.
+#                 if res[run][ind]==1.:
+#                     correct_nccof += 1
+#                 if res_nbcof[run][ind]==1.:
+#                     correct_nbcof += 1
+#             mean_imp=mean_imp+res[run].sum()
+#             
+#             # For ND + NBC
+#             ind=tree.node.label.index(k)
+#             if res_tree_nbc[run][ind]==1.:
+#                 score_tree_nbc=score_tree_nbc+1.
                 
             # For ND + NCC
             ind=tree.node.label.index(k)
@@ -247,8 +254,8 @@ for f in filename :
                 imp_tree_ncc=imp_tree_ncc+1.
                 if res_tree_ncc[run][ind]==1.:
                     correct_tree_ncc += 1
-                if res_tree_nbc[run][ind]==1.:
-                    correct_tree_nbc += 1 
+#                 if res_tree_nbc[run][ind]==1.:
+#                     correct_tree_nbc += 1 
             mean_imp_tree_ncc= mean_imp_tree_ncc + res_tree_ncc[run].sum()
                 
             total=total+1.
@@ -263,7 +270,7 @@ for f in filename :
 #     print 'mean imp & na & na & ' + str(round(mean_imp_ncc/total,2)) + ' & ' + 'na & ' + str(round(mean_imp/total,2)) + ' & ' + 'na & ' + str(round(mean_imp_tree_ncc/total,2))+ '\\\\'
 #     print "\\hline"
     
-    print '\\multicolumn{7}{|l|}{\\textit{' + f + '} (total evaluations: '+  str(int(total)) + ') } \\\\'     
+#     print '\\multicolumn{7}{|l|}{\\textit{' + f + '} (total evaluations: '+  str(int(total)) + ') } \\\\'     
 #     print '\\hline'
 #     print 'set accuracy & ' + str(round(score_nbc/total*100,2)) + '\% & ' + str(round(score_ncc/total*100,2)) + '\% & ' + str(round(score_nbcof/total*100,2)) + '\% & ' + str(round(score/total*100,2)) + '\% & ' + str(round(score_tree_nbc/total*100,2)) + '\% & ' + str(round(score_tree_ncc/total*100,2)) + '\%\\\\'
 #     print 'disc acc & ' + 'idem & ' + str(round(disc_score_ncc/total*100,2)) + '\% & ' + 'idem & ' + str(round(disc_score/total*100,2)) + '\% & ' + 'idem & ' + str(round(disc_score_tree_ncc/total*100,2)) + '\%\\\\'
@@ -273,12 +280,13 @@ for f in filename :
 #     print 'mean imp & na & ' + str(round(mean_imp_ncc/total,2)) + ' & ' + 'na & ' + str(round(mean_imp/total,2)) + ' & ' + 'na & ' + str(round(mean_imp_tree_ncc/total,2))+ '\\\\'
 #     print "\\hline"
 
-    scores = [score_logit, score_nbcof, disc_u65, score_tree_nbc, disc_u65_tree_ncc]
-    rang = np.argsort(scores) + 1
-    
-    acc.write(f + ' & ' + str(round(score_logit/total*100,2)) + '\% (' + str(rang[0]) + ') & ' + str(round(score_nbcof/total*100,2)) + '\% (' + str(rang[1]) + ') & ' + str(round(disc_u65/total*100,2)) + '\% (' + str(rang[2]) + ') & ' + str(round(score_tree_nbc/total*100,2)) + '\% (' + str(rang[3]) + ') & '  + str(round(disc_u65_tree_ncc/total*100,2)) + '\% (' + str(rang[4]) + ') \\\\ \n' )
-    prec.write(f + str(round(correct_nbcof/imp*100,2))+ ' ' + str(round(correct_nccof/imp*100,2))+ ' ' + str(round(correct_tree_nbc/imp_tree_ncc*100,2))+ ' ' + str(round(correct_tree_ncc/imp_tree_ncc*100,2))+ '\n ')
-    
-
-acc.close()
-prec.close()
+#     scores = [score_logit, score_nbcof, disc_u65, score_tree_nbc, disc_u65_tree_ncc]
+#     rang = np.argsort(scores) + 1
+#     
+#     acc.write(f + ' & ' + str(round(score_logit/total*100,2)) + '\% (' + str(rang[0]) + ') & ' + str(round(score_nbcof/total*100,2)) + '\% (' + str(rang[1]) + ') & ' + str(round(disc_u65/total*100,2)) + '\% (' + str(rang[2]) + ') & ' + str(round(score_tree_nbc/total*100,2)) + '\% (' + str(rang[3]) + ') & '  + str(round(disc_u65_tree_ncc/total*100,2)) + '\% (' + str(rang[4]) + ') \\\\ \n' )
+#     prec.write(f + str(round(correct_nbcof/imp*100,2))+ ' ' + str(round(correct_nccof/imp*100,2))+ ' ' + str(round(correct_tree_nbc/imp_tree_ncc*100,2))+ ' ' + str(round(correct_tree_ncc/imp_tree_ncc*100,2))+ '\n ')
+#     
+# 
+# acc.close()
+# prec.close()
+    print c,round(score_tree_ncc/total*100,2), round(disc_score_tree_ncc/total*100,2), round(disc_u65_tree_ncc/total*100,2), round(imp_tree_ncc/total*100,2), round(correct_tree_ncc/imp_tree_ncc*100,2),round(mean_imp_tree_ncc/total,2)

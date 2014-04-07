@@ -3,12 +3,24 @@
 # from classifip.models import ordinalLogit 
 # from sklearn import cross_validation, datasets, metrics
 import numpy as np
-
+from classifip import dataset
+from binarytree import dichotomies
 # test = classifip.dataset.arff.ArffFile()
 
 
 
-a = np.array([1,2,3])
+arff = dataset.arff.ArffFile()
+arff.load("..//datasets//car.arff")
+ 
+costs = dataset.genCosts.costMatrix(arff)
+costs.ordinalCost()
 
-b = np.zeros(3)
-print str(type(b))
+nd = dichotomies.dichotomies(arff)
+
+tree = nd.build_ordinal(arff)
+
+tree.learnAll(dataset)
+
+
+ 
+
